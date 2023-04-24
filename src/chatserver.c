@@ -319,7 +319,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    int opt = 0;
+    int opt = 1;
     // SO_REUSEADDR tells the kernel that even if this port is busy (in the
     // TIME_WAIT state), go ahead and reuse it anyway. If it is busy, but with
     // another state, you will still get an address already in use error. It is

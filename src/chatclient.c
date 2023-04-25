@@ -34,6 +34,7 @@ int handle_stdin() {
     /* Check for "bye" message */
     if (strcmp(inbuf, "bye") == 0) {
         strcpy(username, "");
+	send(client_socket, username, strlen(username), 0);
 	return 1;
     }
 
@@ -86,21 +87,17 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    while (1) {
-        printf("Enter a username: ");
-        fgets(username, MAX_NAME_LEN + 1, stdin);
-        size_t len = strlen(username);
-        if (len > 0 && username[len - 1] == '\n') {
-            username[--len] = '\0';
-        }
-
-        if (len == 0 || len > MAX_NAME_LEN) {
-            printf("Sorry, limit your username to %d characters.\n", MAX_NAME_LEN);
-            continue;
-	} else {
-	    break;
-        }
+    do {
+    printf("Enter a username: ");
+    fflush(stdout); // ensure prompt is printed immediately
+    fgets(username, MAX_NAME_LEN + 1, stdin); // read user input
+    username[strcspn(username, "\n")] = 0; // remove trailing newline
+    if (strlen(username) == 0) {
+        printf("Username cannot be empty. Please try again.\n");
+    } else if (strlen(username) > MAX_NAME_LEN) {
+        printf("Sorry, limit your username to %d characters. Please try again.\n", MAX_NAME_LEN);
     }
+} while (strlen(username) == 0 || strlen(username) > MAX_NAME_LEN);
 
     printf("Hello, %s. Let's try to connect to the server.\n", username);
 

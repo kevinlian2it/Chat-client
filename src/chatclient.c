@@ -22,9 +22,10 @@ int handle_stdin() {
 
     /* Check for message length */
     size_t len = strlen(inbuf);
-    if (len > 0 && inbuf[len-1] != '\n') {
+    if ( (len > 0 && inbuf[len-1] != '\n') || len >= MAX_MSG_LEN) {
         fprintf(stderr, "Sorry, limit your message to 1 line of at most %d characters.\n", MAX_MSG_LEN);
-        while (fgets(inbuf, BUFLEN, stdin) != NULL && inbuf[strlen(inbuf)-1] != '\n');
+        int ch;
+        while ((ch = getchar()) != '\n' && ch != EOF); // Use getchar() to discard characters
         return -1;
     }
 
@@ -38,7 +39,7 @@ int handle_stdin() {
     }
 
     /* Format message and send to server */
-    snprintf(outbuf, MAX_MSG_LEN, "%.*s", MAX_MSG_LEN - MAX_NAME_LEN - 3, inbuf);
+    snprintf(outbuf, BUFLEN, "%.*s", MAX_MSG_LEN - MAX_NAME_LEN - 3, inbuf);
     if (send(client_socket, outbuf, strlen(outbuf)+1, 0) < 0) {
         perror("send");
         return -1;
@@ -46,6 +47,7 @@ int handle_stdin() {
 
     return 0;
 }
+
 int handle_client_socket() {
     ssize_t nbytes = recv(client_socket, inbuf, BUFLEN, 0);
     if (nbytes < 0 && errno != EINTR) {
@@ -110,7 +112,7 @@ int main(int argc, char **argv) {
         username[MAX_NAME_LEN] = '\0';
     	break;
     }
-
+    
     printf("Hello, %s. Let's try to connect to the server.\n", username);
     
     client_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -134,14 +136,16 @@ int main(int argc, char **argv) {
         close(client_socket);
         return EXIT_FAILURE;
     }
+    
     inbuf[nbytes] = '\0';
     printf("\n%s\n\n", inbuf);
-
-    if (send(client_socket, username, strlen(username), 0) < 0) {
+    
+    memset(inbuf, 0, sizeof(inbuf)); // clear buffer
+    if (send(client_socket, username, strlen(username) + 1, 0) < 0) { // Add the null terminator by including +1 in the length
         perror("Sending username");
         close(client_socket);
-        return EXIT_FAILURE;
-    }
+    	return EXIT_FAILURE;
+    }	
 
     fd_set read_fds;
     int exit_flag = 0;

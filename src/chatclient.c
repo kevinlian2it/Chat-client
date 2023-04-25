@@ -67,6 +67,7 @@ int handle_client_socket() {
     }
 }
 
+
 int main(int argc, char **argv) {
     if (argc != 3) {
         fprintf(stderr, "Usage: %s <server IP> <port>\n", argv[0]);
@@ -80,30 +81,38 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    int port = atoi(argv[2]);
+    int port;
+    if (!parse_int(argv[2], &port, "port")) {
+        return EXIT_FAILURE;
+    }
     if (port < 1024 || port > 65535) {
         fprintf(stderr, "Invalid port number: %d\n", port);
         return EXIT_FAILURE;
     }
 
+    char username[MAX_NAME_LEN + 1];
+    
     while (1) {
         printf("Enter a username: ");
-        fgets(username, MAX_NAME_LEN + 1, stdin);
-        size_t len = strlen(username);
-        if (len > 0 && username[len - 1] == '\n') {
-            username[--len] = '\0';
-        }
+        char input[MAX_MSG_LEN + 1];
+        fgets(input, MAX_MSG_LEN, stdin);
 
-        if (len == 0 || len > MAX_NAME_LEN) {
-            printf("Sorry, limit your username to %d characters.\n", MAX_NAME_LEN);
-            continue;
-	} else {
-	    break;
+        size_t len = strlen(input);
+        if (len > 0 && input[len - 1] == '\n') {
+            input[--len] = '\0';
         }
+	
+	if (len == 0 || len > MAX_NAME_LEN) {
+            fprintf(stderr, "Sorry, limit your username to %d characters.\n", MAX_NAME_LEN);
+            continue;
+        }
+        strncpy(username, input, MAX_NAME_LEN);
+        username[MAX_NAME_LEN] = '\0';
+    	break;
     }
 
     printf("Hello, %s. Let's try to connect to the server.\n", username);
-
+    
     client_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (client_socket < 0) {
         perror("Creating socket");

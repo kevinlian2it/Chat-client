@@ -17,6 +17,10 @@ int handle_stdin() {
 
     /* Read input from stdin */
     if (fgets(inbuf, BUFLEN, stdin) == NULL) {
+	if(ferror(stdin)) {
+	    perror("fgets");
+	    exit(EXIT_FAILURE);
+	}
         printf("\n");
 	exit(EXIT_SUCCESS);
     }

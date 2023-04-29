@@ -14,8 +14,7 @@ char inbuf[BUFLEN + 1];
 char outbuf[MAX_MSG_LEN + 1];
 
 int handle_stdin() {
-    
-    printf("[%s]: ",username);
+
     /* Read input from stdin */
     if (fgets(inbuf, BUFLEN, stdin) == NULL) {
         perror("fgets");
@@ -36,7 +35,6 @@ int handle_stdin() {
 
     /* Check for "bye" message */
     if (strcmp(inbuf, "bye") == 0) {
-	memset(outbuf, 0, sizeof(outbuf));
 	return 1;
     }
     /* Format message and send to server */
@@ -147,8 +145,10 @@ int main(int argc, char **argv) {
 
     fd_set read_fds;
     int exit_flag = 0;
+    printf("[%s]: ", username);
+    fflush(stdout);
     while (!exit_flag) {
-
+   
         FD_ZERO(&read_fds);
         FD_SET(STDIN_FILENO, &read_fds);
         FD_SET(client_socket, &read_fds);
@@ -159,6 +159,7 @@ int main(int argc, char **argv) {
             perror("Select");
             break;
         }
+
         if (FD_ISSET(STDIN_FILENO, &read_fds)) {
             int ret = handle_stdin();
             if (ret < 0) {
@@ -174,7 +175,11 @@ int main(int argc, char **argv) {
             if (handle_client_socket() < 0) {
                 break;
             }
-        }
+	}
+	if(exit_flag == 0) {
+	    printf("[%s]: ", username);
+	    fflush(stdout);
+	}
     }
 
     close(client_socket);

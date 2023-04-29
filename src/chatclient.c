@@ -26,18 +26,18 @@ int handle_stdin() {
 
     /* Check for message length */
     size_t len = strlen(inbuf);
-    if ( (len > 0 && inbuf[len-1] != '\n') || len >= MAX_MSG_LEN) {
+    if (len-1 > MAX_MSG_LEN) {
         fprintf(stderr, "Sorry, limit your message to 1 line of at most %d characters.\n", MAX_MSG_LEN);
         int ch;
         while ((ch = getchar()) != '\n' && ch != EOF); // Use getchar() to discard characters
-        return -1;
+	return 0;
     }
 
     /* Trim newline character */
     inbuf[len-1] = '\0';
 
     /* Format message and send to server */
-    snprintf(outbuf, BUFLEN, "%.*s", MAX_MSG_LEN - MAX_NAME_LEN - 3, inbuf);
+    snprintf(outbuf, BUFLEN, "%.*s", MAX_MSG_LEN, inbuf);
     if (send(client_socket, outbuf, strlen(outbuf)+1, 0) < 0) {
         fprintf(stderr, "Error: %s\n", strerror(errno));
 	return -1;
@@ -46,6 +46,7 @@ int handle_stdin() {
     if (strcmp(inbuf, "bye") == 0) {
         return 1;
     }
+
     return 0;
 }
 
@@ -164,6 +165,8 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Error in select: %s\n", strerror(errno));
 	    break;
         }
+
+	//int is_terminal = isatty(STDIN_FILENO);
 
         if (FD_ISSET(STDIN_FILENO, &read_fds)) {
             int ret = handle_stdin();

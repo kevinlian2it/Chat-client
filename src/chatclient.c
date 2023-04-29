@@ -14,6 +14,8 @@ char inbuf[BUFLEN + 1];
 char outbuf[MAX_MSG_LEN + 1];
 
 int handle_stdin() {
+    
+    printf("[%s]: ",username);
     /* Read input from stdin */
     if (fgets(inbuf, BUFLEN, stdin) == NULL) {
         perror("fgets");
@@ -34,17 +36,15 @@ int handle_stdin() {
 
     /* Check for "bye" message */
     if (strcmp(inbuf, "bye") == 0) {
-        strcpy(username, "");
+	memset(outbuf, 0, sizeof(outbuf));
 	return 1;
     }
-
     /* Format message and send to server */
     snprintf(outbuf, BUFLEN, "%.*s", MAX_MSG_LEN - MAX_NAME_LEN - 3, inbuf);
     if (send(client_socket, outbuf, strlen(outbuf)+1, 0) < 0) {
         perror("send");
         return -1;
     }
-
     return 0;
 }
 
@@ -64,7 +64,7 @@ int handle_client_socket() {
         printf("\nServer initiated shutdown.\n");
         return -1;
     } else {
-        printf("%s\n", inbuf);
+        printf("\n%s\n", inbuf);
         return 0;
     }
 }
@@ -92,8 +92,6 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    char username[MAX_NAME_LEN + 1];
-    
     while (1) {
         printf("Enter a username: ");
         char input[MAX_MSG_LEN + 1];
@@ -150,6 +148,7 @@ int main(int argc, char **argv) {
     fd_set read_fds;
     int exit_flag = 0;
     while (!exit_flag) {
+
         FD_ZERO(&read_fds);
         FD_SET(STDIN_FILENO, &read_fds);
         FD_SET(client_socket, &read_fds);
@@ -160,12 +159,12 @@ int main(int argc, char **argv) {
             perror("Select");
             break;
         }
-
         if (FD_ISSET(STDIN_FILENO, &read_fds)) {
             int ret = handle_stdin();
             if (ret < 0) {
                 break;
             } else if (ret == 1) {
+
                 printf("Goodbye.\n");
                 exit_flag = 1;
             }

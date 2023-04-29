@@ -18,11 +18,10 @@ int handle_stdin() {
     /* Read input from stdin */
     if (fgets(inbuf, BUFLEN, stdin) == NULL) {
 	if(ferror(stdin)) {
-	    perror("fgets");
-	    exit(EXIT_FAILURE);
+	    fprintf(stderr, "Error: %s", strerror(errno));
 	}
         printf("\n");
-	exit(EXIT_SUCCESS);
+	return -1;
     }
 
     /* Check for message length */
@@ -40,8 +39,8 @@ int handle_stdin() {
     /* Format message and send to server */
     snprintf(outbuf, BUFLEN, "%.*s", MAX_MSG_LEN - MAX_NAME_LEN - 3, inbuf);
     if (send(client_socket, outbuf, strlen(outbuf)+1, 0) < 0) {
-        perror("send");
-        return -1;
+        fprintf(stderr, "Error: %s\n", strerror(errno));
+	return -1;
     }
     /* Check for "bye" message */
     if (strcmp(inbuf, "bye") == 0) {
@@ -53,8 +52,8 @@ int handle_stdin() {
 int handle_client_socket() {
     ssize_t nbytes = recv(client_socket, inbuf, BUFLEN, 0);
     if (nbytes < 0 && errno != EINTR) {
-        fprintf(stderr, "\nWarning: Failed to receive incoming message.\n");
-        return 0;
+        fprintf(stderr, "\nWarning: Failed to receive incoming message: %s\n", strerror(errno));
+	return 0;
     }
     if (nbytes == 0) {
         fprintf(stderr, "\nConnection to server has been lost.\n");
@@ -103,8 +102,10 @@ int main(int argc, char **argv) {
         if (len > 0 && input[len - 1] == '\n') {
             input[--len] = '\0';
         }
-	
-	if (len == 0 || len > MAX_NAME_LEN) {
+	if (len == 0) {
+	    continue;
+	}
+	if (len > MAX_NAME_LEN) {
             fprintf(stderr, "Sorry, limit your username to %d characters.\n", MAX_NAME_LEN);
             continue;
         }
@@ -117,23 +118,23 @@ int main(int argc, char **argv) {
     
     client_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (client_socket < 0) {
-        perror("Creating socket");
-        return EXIT_FAILURE;
+	fprintf(stderr, "Error creating socket: %s\n", strerror(errno));
+	return EXIT_FAILURE;
     }
 
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(port);
 
     if (connect(client_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        perror("Connecting to server");
-        close(client_socket);
+        fprintf(stderr, "Error connecting to server: %s\n", strerror(errno));
+	close(client_socket);
         return EXIT_FAILURE;
     }
 
     ssize_t nbytes = recv(client_socket, inbuf, BUFLEN, 0);
     if (nbytes <= 0) {
-        perror("Receiving welcome message");
-        close(client_socket);
+        fprintf(stderr, "Error receiving welcome message: %s\n", strerror(errno));
+	close(client_socket);
         return EXIT_FAILURE;
     }
     
@@ -142,8 +143,8 @@ int main(int argc, char **argv) {
     
     memset(inbuf, 0, sizeof(inbuf)); // clear buffer
     if (send(client_socket, username, strlen(username) + 1, 0) < 0) { // Add the null terminator by including +1 in the length
-        perror("Sending username");
-        close(client_socket);
+        fprintf(stderr, "Error sending username: %s\n", strerror(errno));
+	close(client_socket);
     	return EXIT_FAILURE;
     }	
 
@@ -160,8 +161,8 @@ int main(int argc, char **argv) {
         int max_fd = (STDIN_FILENO > client_socket) ? STDIN_FILENO : client_socket;
 
         if (select(max_fd + 1, &read_fds, NULL, NULL, NULL) < 0) {
-            perror("Select");
-            break;
+            fprintf(stderr, "Error in select: %s\n", strerror(errno));
+	    break;
         }
 
         if (FD_ISSET(STDIN_FILENO, &read_fds)) {

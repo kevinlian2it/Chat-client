@@ -17,8 +17,8 @@ int handle_stdin() {
 
     /* Read input from stdin */
     if (fgets(inbuf, BUFLEN, stdin) == NULL) {
-        perror("fgets");
-        return -1;
+        printf("\n");
+	exit(EXIT_SUCCESS);
     }
 
     /* Check for message length */
@@ -33,15 +33,15 @@ int handle_stdin() {
     /* Trim newline character */
     inbuf[len-1] = '\0';
 
-    /* Check for "bye" message */
-    if (strcmp(inbuf, "bye") == 0) {
-	return 1;
-    }
     /* Format message and send to server */
     snprintf(outbuf, BUFLEN, "%.*s", MAX_MSG_LEN - MAX_NAME_LEN - 3, inbuf);
     if (send(client_socket, outbuf, strlen(outbuf)+1, 0) < 0) {
         perror("send");
         return -1;
+    }
+    /* Check for "bye" message */
+    if (strcmp(inbuf, "bye") == 0) {
+        return 1;
     }
     return 0;
 }
@@ -49,7 +49,7 @@ int handle_stdin() {
 int handle_client_socket() {
     ssize_t nbytes = recv(client_socket, inbuf, BUFLEN, 0);
     if (nbytes < 0 && errno != EINTR) {
-        fprintf(stderr, "Warning: Failed to receive incoming message.\n");
+        fprintf(stderr, "\nWarning: Failed to receive incoming message.\n");
         return 0;
     }
     if (nbytes == 0) {

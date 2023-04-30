@@ -28,9 +28,11 @@ int handle_stdin() {
     size_t len = strlen(inbuf);
     if (len-1 > MAX_MSG_LEN) {
         fprintf(stderr, "Sorry, limit your message to 1 line of at most %d characters.\n", MAX_MSG_LEN);
-        int ch;
-        while ((ch = getchar()) != '\n' && ch != EOF); // Use getchar() to discard characters
-	return 0;
+        printf("[%s]: ", username); 
+        fflush(stdout);
+	while (fgets(inbuf, BUFLEN, stdin) && inbuf[strlen(inbuf) - 1] != '\n');
+	
+        return 2;
     }
 
     /* Trim newline character */
@@ -108,7 +110,8 @@ int main(int argc, char **argv) {
 	}
 	if (len > MAX_NAME_LEN) {
             fprintf(stderr, "Sorry, limit your username to %d characters.\n", MAX_NAME_LEN);
-            continue;
+            while (fgets(input, MAX_NAME_LEN + 2, stdin) && input[strlen(input) - 1] != '\n');
+	    continue;
         }
         strncpy(username, input, MAX_NAME_LEN);
         username[MAX_NAME_LEN] = '\0';
@@ -151,10 +154,12 @@ int main(int argc, char **argv) {
 
     fd_set read_fds;
     int exit_flag = 0;
-    printf("[%s]: ", username);
-    fflush(stdout);
+    int ret = 0;
     while (!exit_flag) {
-   
+       	if (ret != 2){
+		printf("[%s]: ", username);
+    		fflush(stdout);
+	}
         FD_ZERO(&read_fds);
         FD_SET(STDIN_FILENO, &read_fds);
         FD_SET(client_socket, &read_fds);
@@ -173,20 +178,16 @@ int main(int argc, char **argv) {
             if (ret < 0) {
                 break;
             } else if (ret == 1) {
-
                 printf("Goodbye.\n");
                 exit_flag = 1;
+            } else if (ret == 2) {
+            	continue;
             }
-        }
-
+	}
         if (FD_ISSET(client_socket, &read_fds)) {
             if (handle_client_socket() < 0) {
                 break;
             }
-	}
-	if(exit_flag == 0) {
-	    printf("[%s]: ", username);
-	    fflush(stdout);
 	}
     }
 

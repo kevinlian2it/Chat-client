@@ -14,36 +14,41 @@ char inbuf[BUFLEN + 1];
 char outbuf[MAX_MSG_LEN + 1];
 
 int handle_stdin() {
+    size_t len;
 
     /* Read input from stdin */
     if (fgets(inbuf, BUFLEN, stdin) == NULL) {
-	if(ferror(stdin)) {
-	    fprintf(stderr, "Error: %s", strerror(errno));
-	}
+        if(ferror(stdin)) {
+            fprintf(stderr, "Error: %s", strerror(errno));
+        }
         printf("\n");
-	return -1;
+        return -1;
     }
 
-    /* Check for message length */
-    size_t len = strlen(inbuf);
-    if (len-1 > MAX_MSG_LEN) {
-        fprintf(stderr, "Sorry, limit your message to 1 line of at most %d characters.\n", MAX_MSG_LEN);
-        printf("[%s]: ", username); 
+    len = strlen(inbuf);
+
+    /* If message length is greater than MAX_MSG_LEN, set discard_extra flag */
+    if (len - 1 > MAX_MSG_LEN) {
+    	if (inbuf[len - 1] != '\n') {
+            int ch;
+            while ((ch = getc(stdin)) != EOF && ch != '\n');
+        }
+	fprintf(stderr, "Sorry, limit your message to 1 line of at most %d characters.\n", MAX_MSG_LEN);
+        printf("[%s]: ", username);
         fflush(stdout);
-	while (fgets(inbuf, BUFLEN, stdin) && inbuf[strlen(inbuf) - 1] != '\n');
-	
         return 2;
     }
-
+    
     /* Trim newline character */
-    inbuf[len-1] = '\0';
+    inbuf[len - 1] = '\0';
 
     /* Format message and send to server */
     snprintf(outbuf, BUFLEN, "%.*s", MAX_MSG_LEN, inbuf);
-    if (send(client_socket, outbuf, strlen(outbuf)+1, 0) < 0) {
+    if (send(client_socket, outbuf, strlen(outbuf) + 1, 0) < 0) {
         fprintf(stderr, "Error: %s\n", strerror(errno));
-	return -1;
+        return -1;
     }
+
     /* Check for "bye" message */
     if (strcmp(inbuf, "bye") == 0) {
         return 1;
@@ -53,16 +58,23 @@ int handle_stdin() {
 }
 
 int handle_client_socket() {
-    ssize_t nbytes = recv(client_socket, inbuf, BUFLEN, 0);
-    if (nbytes < 0 && errno != EINTR) {
-        fprintf(stderr, "\nWarning: Failed to receive incoming message: %s\n", strerror(errno));
-	return 0;
+    ssize_t nbytes;
+    size_t received = 0;
+    while (received < BUFLEN) {
+	nbytes = recv(client_socket, &inbuf[received], 1, 0);
+    	if (nbytes < 0 && errno != EINTR) {
+        	fprintf(stderr, "\nWarning: Failed to receive incoming message: %s\n", strerror(errno));
+		return 0;
+    	}
+    	if (nbytes == 0) {
+        	fprintf(stderr, "\nConnection to server has been lost.\n");
+        	return -1;
+    	}
+    	if(inbuf[received] == '\0') {
+		break;
+	}
+	received += nbytes;
     }
-    if (nbytes == 0) {
-        fprintf(stderr, "\nConnection to server has been lost.\n");
-        return -1;
-    }
-    inbuf[nbytes] = '\0';
 
     if (strcmp(inbuf, "bye") == 0) {
         printf("\nServer initiated shutdown.\n");
@@ -156,9 +168,9 @@ int main(int argc, char **argv) {
     int exit_flag = 0;
     int ret = 0;
     while (!exit_flag) {
-       	if (ret != 2){
-		printf("[%s]: ", username);
-    		fflush(stdout);
+	if(ret != 2) {
+    	    printf("[%s]: ", username);
+	    fflush(stdout);
 	}
         FD_ZERO(&read_fds);
         FD_SET(STDIN_FILENO, &read_fds);
@@ -174,14 +186,12 @@ int main(int argc, char **argv) {
 	//int is_terminal = isatty(STDIN_FILENO);
 
         if (FD_ISSET(STDIN_FILENO, &read_fds)) {
-            int ret = handle_stdin();
+            ret = handle_stdin();
             if (ret < 0) {
                 break;
             } else if (ret == 1) {
                 printf("Goodbye.\n");
                 exit_flag = 1;
-            } else if (ret == 2) {
-            	continue;
             }
 	}
         if (FD_ISSET(client_socket, &read_fds)) {

@@ -168,7 +168,8 @@ int main(int argc, char **argv) {
     int exit_flag = 0;
     int ret = 0;
     while (!exit_flag) {
-	if(ret != 2) {
+	int is_terminal = isatty(STDIN_FILENO);
+	if(ret != 2 && is_terminal == 1) {
     	    printf("[%s]: ", username);
 	    fflush(stdout);
 	}
@@ -182,8 +183,6 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Error in select: %s\n", strerror(errno));
 	    break;
         }
-
-	//int is_terminal = isatty(STDIN_FILENO);
 
         if (FD_ISSET(STDIN_FILENO, &read_fds)) {
             ret = handle_stdin();

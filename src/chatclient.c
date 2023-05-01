@@ -34,8 +34,6 @@ int handle_stdin() {
             while ((ch = getc(stdin)) != EOF && ch != '\n');
         }
 	fprintf(stderr, "Sorry, limit your message to 1 line of at most %d characters.\n", MAX_MSG_LEN);
-        printf("[%s]: ", username);
-        fflush(stdout);
         return 2;
     }
     
@@ -110,8 +108,15 @@ int main(int argc, char **argv) {
 
     while (1) {
         printf("Enter a username: ");
-        char input[MAX_MSG_LEN + 1];
-        fgets(input, MAX_MSG_LEN, stdin);
+        char input[BUFLEN + 1];
+
+	if (fgets(input, BUFLEN, stdin) == NULL) {
+            if(ferror(stdin)) {
+                fprintf(stderr, "Error: %s", strerror(errno));
+            }
+            printf("\n");
+            return -1;
+    	}
 
         size_t len = strlen(input);
         if (len > 0 && input[len - 1] == '\n') {
@@ -122,7 +127,10 @@ int main(int argc, char **argv) {
 	}
 	if (len > MAX_NAME_LEN) {
             fprintf(stderr, "Sorry, limit your username to %d characters.\n", MAX_NAME_LEN);
-            while (fgets(input, MAX_NAME_LEN + 2, stdin) && input[strlen(input) - 1] != '\n');
+	    if (input[len] != '\0') {
+            	int ch;
+            	while ((ch = getc(stdin)) != EOF && ch != '\n');
+            }
 	    continue;
         }
         strncpy(username, input, MAX_NAME_LEN);
@@ -169,7 +177,7 @@ int main(int argc, char **argv) {
     int ret = 0;
     while (!exit_flag) {
 	int is_terminal = isatty(STDIN_FILENO);
-	if(ret != 2 && is_terminal == 1) {
+	if(is_terminal == 1) {
     	    printf("[%s]: ", username);
 	    fflush(stdout);
 	}

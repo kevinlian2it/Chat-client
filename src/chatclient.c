@@ -165,7 +165,7 @@ int main(int argc, char **argv) {
     inbuf[nbytes] = '\0';
     printf("\n%s\n\n", inbuf);
     
-    memset(inbuf, 0, sizeof(inbuf)); // clear buffer
+    memset(inbuf, 0, sizeof(inbuf));
     if (send(client_socket, username, strlen(username) + 1, 0) < 0) { // Add the null terminator by including +1 in the length
         fprintf(stderr, "Error sending username: %s\n", strerror(errno));
 	close(client_socket);
